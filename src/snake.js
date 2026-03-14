@@ -94,3 +94,13 @@ export function hitSelf(snake) {
 export function occupies(snake, row, col) {
   return snake.segments.some(seg => seg.row === row && seg.col === col);
 }
+
+/**
+ * Envuelve la cabeza al lado opuesto si sale por cualquier borde.
+ * Se usa en el modo Fácil para que no haya colisión con paredes.
+ */
+export function wrapSnake(snake) {
+  const head = snake.segments[0];
+  head.row   = ((head.row % ROWS) + ROWS) % ROWS;
+  head.col   = ((head.col % COLS) + COLS) % COLS;
+}

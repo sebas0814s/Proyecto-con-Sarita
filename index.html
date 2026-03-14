@@ -8,52 +8,108 @@
   </head>
   <body>
     <div id="app">
-      <!-- Pantalla de inicio -->
+
+      <!-- ══ Pantalla de inicio ══════════════════════════════════ -->
       <div id="screen-start" class="screen active">
         <h1 class="title">🐍 Snake</h1>
         <p class="subtitle">Proyecto con Sara</p>
-        <div class="controls-info">
-          <p>⬆ ⬇ ⬅ ➡ &nbsp; Mover la culebra</p>
-          <p>P &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Pausar</p>
+
+        <div class="difficulty-section">
+          <p class="section-label">Selecciona dificultad</p>
+          <div class="difficulty-buttons">
+            <button class="btn-difficulty" data-difficulty="easy">
+              <span class="diff-icon">🟢</span>
+              <span class="diff-name">Fácil</span>
+              <span class="diff-desc">Sin muros · Lento</span>
+            </button>
+            <button class="btn-difficulty active-diff" data-difficulty="normal">
+              <span class="diff-icon">🟡</span>
+              <span class="diff-name">Normal</span>
+              <span class="diff-desc">Clásico</span>
+            </button>
+            <button class="btn-difficulty" data-difficulty="hard">
+              <span class="diff-icon">🔴</span>
+              <span class="diff-name">Difícil</span>
+              <span class="diff-desc">Veloz · Extremo</span>
+            </button>
+          </div>
         </div>
-        <button id="btn-start" class="btn btn-primary">Jugar</button>
+
+        <div class="controls-info">
+          <p>⬆ ⬇ ⬅ ➡ &nbsp;·&nbsp; WASD &nbsp;&nbsp; Mover</p>
+          <p>P &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Pausar</p>
+          <p>⭐ Comida dorada = puntos extra</p>
+        </div>
+
+        <button id="btn-start" class="btn btn-primary">¡ Jugar !</button>
       </div>
 
-      <!-- Pantalla del juego -->
+      <!-- ══ Pantalla del juego ══════════════════════════════════ -->
       <div id="screen-game" class="screen">
         <header class="game-header">
           <div class="stat">
             <span class="stat-label">Puntaje</span>
             <span id="display-score" class="stat-value">0</span>
           </div>
-          <button id="btn-pause" class="btn btn-small">Pausa</button>
+          <div class="stat" id="combo-stat">
+            <span class="stat-label">Combo</span>
+            <span id="display-combo" class="stat-value combo-value">x1</span>
+          </div>
+          <button id="btn-pause" class="btn btn-small">⏸</button>
           <div class="stat">
             <span class="stat-label">Récord</span>
             <span id="display-best" class="stat-value">0</span>
           </div>
         </header>
 
-        <canvas id="game-canvas"></canvas>
+        <div class="canvas-wrapper">
+          <canvas id="game-canvas"></canvas>
 
-        <!-- Overlay de pausa -->
-        <div id="overlay-pause" class="overlay hidden">
-          <p>⏸ Pausado</p>
-          <button id="btn-resume" class="btn btn-primary">Continuar</button>
+          <!-- Overlay de pausa -->
+          <div id="overlay-pause" class="overlay hidden">
+            <p class="overlay-title">⏸ Pausado</p>
+            <button id="btn-resume" class="btn btn-primary overlay-btn">Continuar</button>
+          </div>
+
+          <!-- Overlay de countdown -->
+          <div id="overlay-countdown" class="overlay hidden">
+            <span id="countdown-number" class="countdown-num">3</span>
+          </div>
+        </div>
+
+        <div id="difficulty-badge" class="difficulty-badge"></div>
+      </div>
+
+      <!-- ══ Pantalla de Game Over ═══════════════════════════════ -->
+      <div id="screen-gameover" class="screen">
+        <h2 class="title danger-text">💀 Game Over</h2>
+        <div id="gameover-diff-badge" class="difficulty-badge"></div>
+
+        <p class="result-label">Puntaje final</p>
+        <p id="final-score" class="result-score">0</p>
+
+        <div class="result-stats">
+          <div class="result-stat">
+            <span class="result-stat-label">Combo máx.</span>
+            <span id="final-combo" class="result-stat-value">x1</span>
+          </div>
+        </div>
+
+        <p id="new-record" class="new-record hidden">🏆 ¡Nuevo récord!</p>
+
+        <div class="highscores-section">
+          <p class="section-label">🏅 Top 5</p>
+          <ol id="highscores-list" class="highscores-list"></ol>
+        </div>
+
+        <div class="gameover-buttons">
+          <button id="btn-restart" class="btn btn-primary">Jugar de nuevo</button>
+          <button id="btn-menu"    class="btn btn-secondary">Menú</button>
         </div>
       </div>
 
-      <!-- Pantalla de Game Over -->
-      <div id="screen-gameover" class="screen">
-        <h2 class="title">💀 Game Over</h2>
-        <p class="result-label">Puntaje final</p>
-        <p id="final-score" class="result-score">0</p>
-        <p id="new-record" class="new-record hidden">🏆 ¡Nuevo récord!</p>
-        <button id="btn-restart" class="btn btn-primary">Jugar de nuevo</button>
-        <button id="btn-menu" class="btn btn-secondary">Menú</button>
-      </div>
     </div>
 
-    <!-- Módulos ES (un archivo por responsabilidad) -->
     <script type="module" src="src/game.js"></script>
   </body>
 </html>

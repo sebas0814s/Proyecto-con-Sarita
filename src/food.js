@@ -1,14 +1,18 @@
 /**
  * food.js
  * Responsabilidad: crear y posicionar la comida.
- * La comida aparece en una celda aleatoria libre del tablero.
+ * Soporta comida normal y comida especial (estrella dorada).
  */
 
 import { COLS, ROWS } from './board.js';
 import { occupies }   from './snake.js';
 
-/** Genera una posición aleatoria que no esté ocupada por la culebra. */
-export function spawnFood(snake) {
+/**
+ * Genera una posición aleatoria libre y devuelve un objeto de comida.
+ * @param {object}  snake     serpiente actual (para evitar solapamiento)
+ * @param {boolean} isSpecial true → comida especial (estrella dorada)
+ */
+export function spawnFood(snake, isSpecial = false) {
   let position;
 
   do {
@@ -18,10 +22,15 @@ export function spawnFood(snake) {
     };
   } while (occupies(snake, position.row, position.col));
 
-  return position;
+  return {
+    row:     position.row,
+    col:     position.col,
+    special: isSpecial,
+    // spawnTime se asigna desde game.js usando el timestamp del animationFrame
+  };
 }
 
-/** Comprueba si la cabeza de la culebra está en la misma celda que la comida. */
+/** Comprueba si la cabeza de la culebra coincide con la posición de la comida. */
 export function isEaten(head, food) {
   return head.row === food.row && head.col === food.col;
 }
