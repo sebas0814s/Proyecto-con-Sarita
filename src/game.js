@@ -36,6 +36,11 @@ import {
   syncDifficultyButtons,
 } from './ui.js';
 
+import {
+  playEat, playSpecialEat, playCombo, playDeath,
+  startBgMusic, stopBgMusic,
+} from './audio.js';
+
 // ── Estado global ─────────────────────────────────────────────────
 let ctx;
 let snake, food, specialFood;
@@ -73,11 +78,15 @@ function bindButtons() {
       selectedDifficulty = btn.dataset.difficulty;
     });
   });
+
+  // La música de fondo arranca con el primer gesto del usuario
+  document.addEventListener('pointerdown', () => startBgMusic(), { once: true });
 }
 
 function goToMenu() {
   showScreen('start');
   syncDifficultyButtons(selectedDifficulty);
+  startBgMusic();
 }
 
 // ── Countdown + arranque ──────────────────────────────────────────
@@ -87,6 +96,7 @@ function requestCountdown() {
 
   config = DIFFICULTY_CONFIGS[selectedDifficulty];
 
+  stopBgMusic();
   showScreen('game');
   clearBoard(ctx); // canvas limpio mientras cuenta atrás
   showDifficultyBadge(selectedDifficulty, config.name);
@@ -174,7 +184,8 @@ function gameTick(timestamp) {
 
   // Comer comida normal
   if (ateFood) {
-    const pts = calcPoints(score, config, snake.segments.length, timestamp - lastFoodTime);
+    const prevCombo = score.combo;
+    const pts       = calcPoints(score, config, snake.segments.length, timestamp - lastFoodTime);
     addPoints(score, pts);
     spawnParticles(food, pts);
     lastFoodTime = timestamp;
@@ -187,19 +198,26 @@ function gameTick(timestamp) {
       specialFood.spawnTime = timestamp;
     }
 
+    playEat();
+    if (score.combo > prevCombo && score.combo > 1) playCombo(score.combo);
+
     updateScoreDisplay(score);
     updateComboDisplay(score.combo);
   }
 
   // Comer comida especial
   if (ateSpecial) {
-    const specPts = calcPoints(score, config, snake.segments.length, timestamp - lastFoodTime)
-                    * config.specialMultiplier;
+    const prevCombo = score.combo;
+    const specPts   = calcPoints(score, config, snake.segments.length, timestamp - lastFoodTime)
+                      * config.specialMultiplier;
     addPoints(score, specPts);
     spawnParticles(specialFood, specPts);
     lastFoodTime = timestamp;
     specialFood  = null;
     speedMs      = Math.max(config.minSpeed, speedMs - config.speedDec * 2);
+
+    playSpecialEat();
+    if (score.combo > prevCombo && score.combo > 1) playCombo(score.combo);
 
     updateScoreDisplay(score);
     updateComboDisplay(score.combo);
@@ -224,6 +242,7 @@ const DEATH_FLASH_RATE = 110; // ms por destello
 function startDeathAnimation(timestamp) {
   deathPhase = 'running';
   deathStart = timestamp;
+  playDeath();
 }
 
 function runDeathAnimation(timestamp) {
@@ -276,6 +295,7 @@ function endGame() {
   const topScores = saveScore(score);
 
   showGameOver(score, newRecord, topScores);
+  startBgMusic();
 }
 
 // ── Arranque ──────────────────────────────────────────────────────

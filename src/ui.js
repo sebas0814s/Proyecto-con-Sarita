@@ -4,6 +4,8 @@
  * Centraliza todos los cambios de pantalla, textos y animaciones UI.
  */
 
+import { playCountTick, playCountGo } from './audio.js';
+
 const screens = {
   start:    document.getElementById('screen-start'),
   game:     document.getElementById('screen-game'),
@@ -91,7 +93,9 @@ export function startCountdown(from, callback) {
     void numEl.offsetWidth;
     numEl.style.animation = '';
 
+    // Sonido del contador
     if (isGo) {
+      playCountGo();
       setTimeout(() => {
         overlay.classList.add('hidden');
         callback();
@@ -99,6 +103,7 @@ export function startCountdown(from, callback) {
       return;
     }
 
+    playCountTick();
     count--;
     setTimeout(step, 1000);
   }
