@@ -36,6 +36,12 @@ import {
   syncDifficultyButtons,
 } from './ui.js';
 
+import {
+  unlockAudio,
+  playEat, playSpecialEat, playCombo, playDeath,
+  startBgMusic, stopBgMusic,
+} from './audio.js';
+
 // ── Estado global ─────────────────────────────────────────────────
 let ctx;
 let snake, food, specialFood;
@@ -43,11 +49,11 @@ let score, config;
 let paused, gameOver;
 let speedMs, lastTickTime;
 let animationId, removeInputListeners;
-let lastFoodTime;             // timestamp (raf) del último alimento comido
+let lastFoodTime;
 let selectedDifficulty;
 
 // Estado de animación de muerte
-let deathPhase = null;        // null | 'running'
+let deathPhase = null; // null | 'running'
 let deathStart = 0;
 
 // ── Inicialización (una sola vez) ─────────────────────────────────
@@ -59,14 +65,18 @@ function init() {
 }
 
 function bindButtons() {
-  document.getElementById('btn-start')  .addEventListener('click', requestCountdown);
-  document.getElementById('btn-restart').addEventListener('click', requestCountdown);
-  document.getElementById('btn-menu')   .addEventListener('click', goToMenu);
+  document.getElementById('btn-start')  .addEventListener('click', onStart);
+  document.getElementById('btn-restart').addEventListener('click', onStart);
+  document.getElementById('btn-menu')   .addEventListener('click', onMenu);
   document.getElementById('btn-pause')  .addEventListener('click', togglePause);
   document.getElementById('btn-resume') .addEventListener('click', togglePause);
 
   document.querySelectorAll('.btn-difficulty').forEach(btn => {
     btn.addEventListener('click', () => {
+      // Desbloquear audio en la primera interacción del usuario
+      unlockAudio();
+      startBgMusic();
+
       document.querySelectorAll('.btn-difficulty')
         .forEach(b => b.classList.remove('active-diff'));
       btn.classList.add('active-diff');
@@ -75,9 +85,15 @@ function bindButtons() {
   });
 }
 
-function goToMenu() {
+function onStart() {
+  unlockAudio(); // garantiza que el contexto existe antes de todo lo demás
+  requestCountdown();
+}
+
+function onMenu() {
   showScreen('start');
   syncDifficultyButtons(selectedDifficulty);
+  startBgMusic();
 }
 
 // ── Countdown + arranque ──────────────────────────────────────────
@@ -87,8 +103,9 @@ function requestCountdown() {
 
   config = DIFFICULTY_CONFIGS[selectedDifficulty];
 
+  stopBgMusic();
   showScreen('game');
-  clearBoard(ctx); // canvas limpio mientras cuenta atrás
+  clearBoard(ctx);
   showDifficultyBadge(selectedDifficulty, config.name);
   startCountdown(3, startGame);
 }
@@ -124,7 +141,6 @@ function loop(timestamp) {
 
   animationId = requestAnimationFrame(loop);
 
-  // Animación de muerte tiene prioridad
   if (deathPhase === 'running') {
     runDeathAnimation(timestamp);
     return;
@@ -132,25 +148,23 @@ function loop(timestamp) {
 
   if (paused) return;
 
-  // Inicializa lastFoodTime con el primer timestamp real
   if (lastFoodTime === 0) lastFoodTime = timestamp;
 
-  // Render cada frame → partículas y comida siempre fluidos
   render(timestamp);
 
-  // Combo timeout: resetear si lleva demasiado sin comer
+  // Combo timeout
   if (score.combo > 1 && timestamp - lastFoodTime > config.comboTimeout) {
     resetCombo(score);
     updateComboDisplay(score.combo);
   }
 
-  // Comida especial: desaparece si caduca
+  // Comida especial caduca
   if (specialFood && timestamp - specialFood.spawnTime > config.specialDuration) {
     specialFood = null;
   }
 
   const elapsed = timestamp - lastTickTime;
-  if (elapsed < speedMs) return; // Aún no toca avanzar la lógica
+  if (elapsed < speedMs) return;
   lastTickTime = timestamp;
 
   gameTick(timestamp);
@@ -172,34 +186,41 @@ function gameTick(timestamp) {
     if (hitWall(snake) || hitSelf(snake)) { startDeathAnimation(timestamp); return; }
   }
 
-  // Comer comida normal
+  // ── Comer comida normal ───────────────────────────────────────
   if (ateFood) {
-    const pts = calcPoints(score, config, snake.segments.length, timestamp - lastFoodTime);
+    const prevCombo = score.combo;
+    const pts       = calcPoints(score, config, snake.segments.length, timestamp - lastFoodTime);
     addPoints(score, pts);
     spawnParticles(food, pts);
     lastFoodTime = timestamp;
     food         = spawnFood(snake, false);
     speedMs      = Math.max(config.minSpeed, speedMs - config.speedDec);
 
-    // Posible aparición de comida especial
     if (!specialFood && Math.random() < config.specialChance) {
       specialFood           = spawnFood(snake, true);
       specialFood.spawnTime = timestamp;
     }
 
+    playEat();
+    if (score.combo > prevCombo && score.combo > 1) playCombo(score.combo);
+
     updateScoreDisplay(score);
     updateComboDisplay(score.combo);
   }
 
-  // Comer comida especial
+  // ── Comer comida especial ─────────────────────────────────────
   if (ateSpecial) {
-    const specPts = calcPoints(score, config, snake.segments.length, timestamp - lastFoodTime)
-                    * config.specialMultiplier;
+    const prevCombo = score.combo;
+    const specPts   = calcPoints(score, config, snake.segments.length, timestamp - lastFoodTime)
+                      * config.specialMultiplier;
     addPoints(score, specPts);
     spawnParticles(specialFood, specPts);
     lastFoodTime = timestamp;
     specialFood  = null;
     speedMs      = Math.max(config.minSpeed, speedMs - config.speedDec * 2);
+
+    playSpecialEat();
+    if (score.combo > prevCombo && score.combo > 1) playCombo(score.combo);
 
     updateScoreDisplay(score);
     updateComboDisplay(score.combo);
@@ -218,12 +239,13 @@ function render(timestamp) {
 }
 
 // ── Animación de muerte ───────────────────────────────────────────
-const DEATH_DURATION   = 900; // ms totales
-const DEATH_FLASH_RATE = 110; // ms por destello
+const DEATH_DURATION   = 900;
+const DEATH_FLASH_RATE = 110;
 
 function startDeathAnimation(timestamp) {
   deathPhase = 'running';
   deathStart = timestamp;
+  playDeath();
 }
 
 function runDeathAnimation(timestamp) {
@@ -235,12 +257,10 @@ function runDeathAnimation(timestamp) {
   }
 
   clearBoard(ctx);
-
   const flashOn = Math.floor(elapsed / DEATH_FLASH_RATE) % 2 === 0;
 
   snake.segments.forEach((seg, i) => {
     if (flashOn) {
-      // Destello rojo
       const px = seg.col * CELL_SIZE;
       const py = seg.row * CELL_SIZE;
       ctx.fillStyle   = '#e94560';
@@ -276,6 +296,7 @@ function endGame() {
   const topScores = saveScore(score);
 
   showGameOver(score, newRecord, topScores);
+  startBgMusic(); // la música vuelve en la pantalla de Game Over
 }
 
 // ── Arranque ──────────────────────────────────────────────────────
